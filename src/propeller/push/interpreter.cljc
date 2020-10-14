@@ -9,7 +9,7 @@
   [state]
   (let [popped-state (state/pop-stack state :exec)
         instruction (first (:exec state))
-        literal-type (get-literal-type instruction)]     ; nil for non-literals
+        literal-type (get-literal-type instruction)] ; nil for non-literals
     (cond
       ;;
       ;; Recognize functional instruction or input instruction

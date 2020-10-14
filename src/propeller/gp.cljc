@@ -1,6 +1,7 @@
 (ns propeller.gp
   (:require [clojure.string]
             [propeller.genome :as genome]
+            [propeller.report :as report]
             [propeller.variation :as variation]
             [propeller.push.instructions.bool]
             [propeller.push.instructions.character]
@@ -11,31 +12,13 @@
             [propeller.push.instructions.string]
             [propeller.push.instructions.vector]))
 
-(defn report
-  "Reports information each generation."
-  [pop generation]
-  (let [best (first pop)]
-    (println "-------------------------------------------------------")
-    (println "               Report for Generation" generation)
-    (println "-------------------------------------------------------")
-    (print "Best plushy: ") (prn (:plushy best))
-    (print "Best program: ") (prn (genome/plushy->push (:plushy best)))
-    (println "Best total error:" (:total-error best))
-    (println "Best errors:" (:errors best))
-    (println "Best behaviors:" (:behaviors best))
-    (println "Genotypic diversity:"
-             (float (/ (count (distinct (map :plushy pop))) (count pop))))
-    (println "Average genome length:"
-             (float (/ (reduce + (map count (map :plushy pop))) (count pop))))
-    (println)))
-
-(defn gp
-  "Main GP loop."
+(defn gp-generational
+  "Main generational GP loop."
   [{:keys [population-size max-generations error-function instructions
-           max-initial-plushy-size]
+           max-initial-plushy-size print-best-program]
     :as   argmap}]
   ;;
-  (println "Starting GP with args: " argmap)
+  (println "Starting generational GP with args: " argmap)
   ;;
   (loop [generation 0
          population (repeatedly
@@ -43,12 +26,12 @@
                       #(hash-map :plushy (genome/make-random-plushy
                                            instructions
                                            max-initial-plushy-size)))]
-    (let [evaluated-pop (sort-by :total-error
-                                 (#?(:clj  pmap
-                                     :cljs map)
-                                   (partial error-function argmap) population))
-          best-individual (first evaluated-pop)]
-      (report evaluated-pop generation)
+    (let [evaluated-population (sort-by :total-error
+                                        (#?(:clj  pmap
+                                            :cljs map)
+                                          (partial error-function argmap) population))
+          best-individual (first evaluated-population)]
+      (report/report-generational evaluated-population generation print-best-program)
       (cond
         ;; Success on training cases is verified on testing cases
         (zero? (:total-error best-individual))
@@ -64,8 +47,74 @@
         ;;
         :else (recur (inc generation)
                      (if (:elitism argmap)
-                       (conj (repeatedly (dec population-size)
-                                         #(variation/new-individual evaluated-pop argmap))
-                             (first evaluated-pop))
-                       (repeatedly population-size
-                                   #(variation/new-individual evaluated-pop argmap))))))))
+                       (conj (repeatedly
+                               (dec population-size)
+                               #(variation/new-individual evaluated-population argmap))
+                             (first evaluated-population))
+                       (repeatedly
+                         population-size
+                         #(variation/new-individual evaluated-population argmap))))))))
+
+(defn gp-steady-state
+  "Main steady-state GP loop."
+  [{:keys [population-size error-function instructions max-initial-plushy-size
+           prop-children num-children print-best-program]
+    :as   argmap}]
+  ;;
+  (println "Starting steady-state GP with args: " argmap)
+  ;;
+  (loop [population (->>
+                      ;; make population
+                      (repeatedly population-size
+                                  #(hash-map
+                                     :plushy
+                                     (genome/make-random-plushy
+                                       instructions
+                                       max-initial-plushy-size)))
+                      ;; evaluate population
+                      (#?(:clj  pmap
+                          :cljs map)
+                        (partial error-function argmap))
+                      ;; sort population by total error
+                      (sort-by :total-error))
+         best-individual (first population)]
+    (do
+      (report/report-steady-state population print-best-program)
+      (cond
+        ;; Success on training cases is verified on testing cases
+        (zero? (:total-error best-individual))
+        (do (println "SUCCESS! \n\n Checking program on test cases... ")
+            (if (zero? (:total-error (error-function argmap best-individual :test)))
+              (println "Test cases passed.")
+              (println "Test cases failed."))
+            (#?(:clj shutdown-agents)))
+        ;;
+        :else (let [new-individuals (->>
+                                      ;; make new individuals
+                                      (repeatedly num-children
+                                                  #(variation/new-individual
+                                                     population
+                                                     argmap))
+                                      ;; evaluate new individuals
+                                      (#?(:clj  pmap
+                                          :cljs map)
+                                        (partial error-function argmap)))
+                    survivors (random-sample (- 1 prop-children) population)
+                    new-population (sort-by :total-error
+                                            (concat new-individuals survivors))
+                    new-best-individual (first new-population)]
+                (recur new-population new-best-individual))))))
+
+(defn gp
+  [argmap]
+  (case (:gp-type argmap)
+    :generational (gp-generational argmap)
+    :steady-state (->>
+                    ;; compute number of children to produce (generational gap)
+                    (* (:population-size argmap)
+                       (:prop-children argmap))
+                    (int)
+                    ;; add the number of children to the argmap
+                    (assoc argmap :num-children)
+                    ;; run steady-state GP
+                    (gp-steady-state))))

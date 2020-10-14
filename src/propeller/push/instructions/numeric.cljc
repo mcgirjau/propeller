@@ -44,30 +44,33 @@
 (def _add
   ^{:stacks #{}}
   (fn [stack state]
-    #?(:clj (make-instruction state +' [stack stack] stack)
-       :cljs (make-instruction state + [stack stack] stack))))
+    (make-instruction state + [stack stack] stack)))
 
 ;; Pushes the difference of the top two items (i.e. the second item minus the
 ;; top item) onto the same stack
 (def _subtract
   ^{:stacks #{}}
   (fn [stack state]
-    #?(:clj (make-instruction state -' [stack stack] stack)
-       :cljs (make-instruction state - [stack stack] stack))))
+    (make-instruction state - [stack stack] stack)))
 
 ;; Pushes the product of the top two items onto the same stack
 (def _mult
   ^{:stacks #{}}
   (fn [stack state]
-    #?(:clj (make-instruction state *' [stack stack] stack)
-       :cljs (make-instruction state * [stack stack] stack))))
+    (make-instruction state * [stack stack] stack)))
 
-;; Pushes the quotient of the top two items (i.e. the second item divided by the
-;; top item) onto the same stack. If the top item is zero, pushes 1
-(def _quot
+;; Pushes the result of dividing the top two items (i.e. the second item divided
+;; by the top item) onto the same stack. If the top item is zero, pushes 1
+(def _div
   ^{:stacks #{}}
   (fn [stack state]
-    (make-instruction state #(if (zero? %2) 1 (quot %1 %2)) [stack stack] stack)))
+    (make-instruction state
+                      #(cond
+                         (zero? %2) 1
+                         (= :integer stack) (quot %1 %2)
+                         (= :float stack) (/ %1 %2))
+                      [stack stack]
+                      stack)))
 
 ;; Pushes the second item modulo the top item onto the same stack. If the top
 ;; item is zero, pushes 1. The modulus is computed as the remainder of the
@@ -132,7 +135,7 @@
 ;; 2 types x 16 functions = 32 instructions
 (generate-instructions
   [:float :integer]
-  [_gt _gte _lt _lte _add _subtract _mult _quot _mod _max _min _inc _dec
+  [_gt _gte _lt _lte _add _subtract _mult _div _mod _max _min _inc _dec
    _from_boolean _from_char _from_string])
 
 ;; =============================================================================

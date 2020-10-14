@@ -3,7 +3,8 @@
              [propeller.push.utils.macros :refer [def-instruction
                                                   generate-instructions]]))
   (:require [propeller.push.state :as state]
-            [propeller.push.utils.helpers :refer [make-instruction]]
+            [propeller.push.utils.helpers :refer [make-instruction
+                                                  reasonable-string-length?]]
             [propeller.push.utils.macros :refer [def-instruction
                                                  generate-instructions]]))
 
@@ -32,8 +33,11 @@
   ^{:stacks [:print]}
   (fn [state]
     (let [current-output (state/peek-stack state :output)
+          string-to-push (str current-output \newline)
           popped-state (state/pop-stack state :output)]
-      (state/push-to-stack popped-state :output (str current-output \newline)))))
+      (if (reasonable-string-length? string-to-push)
+        (state/push-to-stack popped-state :output string-to-push)
+        state))))
 
 (def _print
   ^{:stacks [:print]}
@@ -46,10 +50,11 @@
                            top-item
                            (pr-str top-item))
             current-output (state/peek-stack state :output)
+            string-to-push (str current-output top-item-str)
             popped-state (state/pop-stack (state/pop-stack state stack) :output)]
-        (state/push-to-stack popped-state
-                             :output
-                             (str current-output top-item-str))))))
+        (if (reasonable-string-length? string-to-push)
+          (state/push-to-stack popped-state :output string-to-push)
+          state)))))
 
 (generate-instructions
   [:boolean :char :code :exec :float :integer :string

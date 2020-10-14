@@ -36,7 +36,7 @@
 ;; Random float between -100.0 and 100.0
 (defn random-float [] (- (* (rand) 200) 100.0))
 
-; Random integer between -100 and 100
+;; Random integer between -100 and 100
 (defn random-int [] (- (rand-int 201) 100.0))
 
 (def instructions
@@ -46,7 +46,7 @@
       (get-stack-instructions #{:float :integer :print})
       ;; input instructions
       (list :in1 :in2)
-      ;; ERCs (constants)
+      ;; ERCs
       (list random-float random-int))))
 
 (def train-and-test-data
