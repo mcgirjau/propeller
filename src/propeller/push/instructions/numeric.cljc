@@ -44,20 +44,20 @@
 (def _add
   ^{:stacks #{}}
   (fn [stack state]
-    (make-instruction state + [stack stack] stack)))
+    (make-instruction state +' [stack stack] stack)))
 
 ;; Pushes the difference of the top two items (i.e. the second item minus the
 ;; top item) onto the same stack
 (def _subtract
   ^{:stacks #{}}
   (fn [stack state]
-    (make-instruction state - [stack stack] stack)))
+    (make-instruction state -' [stack stack] stack)))
 
 ;; Pushes the product of the top two items onto the same stack
 (def _mult
   ^{:stacks #{}}
   (fn [stack state]
-    (make-instruction state * [stack stack] stack)))
+    (make-instruction state *' [stack stack] stack)))
 
 ;; Pushes the result of dividing the top two items (i.e. the second item divided
 ;; by the top item) onto the same stack. If the top item is zero, pushes 1
@@ -124,13 +124,13 @@
 (def _inc
   ^{:stacks #{}}
   (fn [stack state]
-    (make-instruction state inc [stack] stack)))
+    (make-instruction state inc' [stack] stack)))
 
 ;; Pushes the decrement (i.e. -1) of the top item of the stack
 (def _dec
   ^{:stacks #{}}
   (fn [stack state]
-    (make-instruction state dec [stack] stack)))
+    (make-instruction state dec' [stack] stack)))
 
 ;; 2 types x 16 functions = 32 instructions
 (generate-instructions

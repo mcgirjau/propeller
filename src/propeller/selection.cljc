@@ -45,4 +45,5 @@
                                (drop-while #(<= (:slice %) index))
                                (first)
                                (:id))))]
+    (println "Killing" (count ids-to-remove) "individuals...")
     (remove #(get ids-to-remove (:id %)) population)))

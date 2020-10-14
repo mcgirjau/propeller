@@ -1,10 +1,11 @@
 (ns propeller.args
-  (:require [propeller.problems.software.number-io :as number-io]))
+  (:require [propeller.problems.software.median :as median]
+            [propeller.problems.software.number-io :as number-io]))
 
 (def default-argmap
-  {:instructions            number-io/instructions
-   :error-function          number-io/error-function
-   :max-generations         500
+  {:instructions            median/instructions
+   :error-function          median/error-function
+   :max-generations         200
    :population-size         500
    :max-initial-plushy-size 100
    :step-limit              200

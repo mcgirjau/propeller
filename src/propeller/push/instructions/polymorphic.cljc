@@ -25,40 +25,40 @@
         state
         (state/push-to-stack state stack top-item)))))
 
-;; Duplicates n copies of the top item (i.e leaves n copies there). Does not pop
-;; its argument (since that would negate the effect of the duplication). The
-;; number n is determined by the top INTEGER. For n = 0, equivalent to POP.
-;; For n = 1, equivalent to NOOP. For n = 2, equivalent to DUP. Negative values
-;; of n are treated as 0
-(def _dup_times
-  ^{:stacks #{:integer}}
-  (fn [stack state]
-    (if (or (and (= stack :integer)
-                 (<= 2 (count (:integer state))))
-            (and (not= stack :integer)
-                 (not (state/empty-stack? state :integer))
-                 (not (state/empty-stack? state stack))))
-      (let [n (state/peek-stack state :integer)
-            popped-state (state/pop-stack state :integer)
-            top-item (state/peek-stack popped-state stack)
-            top-item-dup (take (- n 1) (repeat top-item))]
-        (cond
-          (< 0 n) (state/push-to-stack-many popped-state stack top-item-dup)
-          :else (state/pop-stack popped-state stack)))
-      state)))
+;;; Duplicates n copies of the top item (i.e leaves n copies there). Does not pop
+;;; its argument (since that would negate the effect of the duplication). The
+;;; number n is determined by the top INTEGER. For n = 0, equivalent to POP.
+;;; For n = 1, equivalent to NOOP. For n = 2, equivalent to DUP. Negative values
+;;; of n are treated as 0
+;(def _dup_times
+;  ^{:stacks #{:integer}}
+;  (fn [stack state]
+;    (if (or (and (= stack :integer)
+;                 (<= 2 (count (:integer state))))
+;            (and (not= stack :integer)
+;                 (not (state/empty-stack? state :integer))
+;                 (not (state/empty-stack? state stack))))
+;      (let [n (state/peek-stack state :integer)
+;            popped-state (state/pop-stack state :integer)
+;            top-item (state/peek-stack popped-state stack)
+;            top-item-dup (take (- n 1) (repeat top-item))]
+;        (cond
+;          (< 0 n) (state/push-to-stack-many popped-state stack top-item-dup)
+;          :else (state/pop-stack popped-state stack)))
+;      state)))
 
-;; Duplicates the top n items on the stack, one time each. The number n is
-;; determined by the top INTEGER. If n <= 0, no items will be duplicated. If
-;; fewer than n items are on the stack, the entire stack will be duplicated.
-(def _dup_items
-  ^{:stacks #{:integer}}
-  (fn [stack state]
-    (if (state/empty-stack? state :integer)
-      state
-      (let [n (state/peek-stack state :integer)
-            popped-state (state/pop-stack state :integer)
-            top-items (take n (get popped-state stack))]
-        (state/push-to-stack-many popped-state stack top-items)))))
+;;; Duplicates the top n items on the stack, one time each. The number n is
+;;; determined by the top INTEGER. If n <= 0, no items will be duplicated. If
+;;; fewer than n items are on the stack, the entire stack will be duplicated.
+;(def _dup_items
+;  ^{:stacks #{:integer}}
+;  (fn [stack state]
+;    (if (state/empty-stack? state :integer)
+;      state
+;      (let [n (state/peek-stack state :integer)
+;            popped-state (state/pop-stack state :integer)
+;            top-items (take n (get popped-state stack))]
+;        (state/push-to-stack-many popped-state stack top-items)))))
 
 ;; Pushes TRUE onto the BOOLEAN stack if the stack is empty. Otherwise FALSE
 (def _empty
@@ -175,5 +175,7 @@
 (generate-instructions
   [:boolean :char :code :exec :float :integer :string
    :vector_boolean :vector_float :vector_integer :vector_string]
-  [_dup _dup_times _dup_items _empty _eq _flush _pop _rot _shove
+  [_dup
+   ;;_dup_times _dup_items
+   _empty _eq _flush _pop _rot _shove
    _stack_depth _swap _yank _yank_dup])

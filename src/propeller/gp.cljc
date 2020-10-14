@@ -3,6 +3,7 @@
             [propeller.genome :as genome]
             [propeller.report :as report]
             [propeller.selection :as selection]
+            [propeller.utils :as utils]
             [propeller.variation :as variation]
             [propeller.push.instructions.bool]
             [propeller.push.instructions.character]
@@ -64,7 +65,8 @@
   ;;
   (println "Starting steady-state GP with args: " argmap)
   ;;
-  (loop [population-size population-size
+  (loop [iteration 0
+         current-population-size population-size
          population (->>
                       ;; make population
                       (repeatedly population-size
@@ -76,12 +78,11 @@
                       ;; evaluate population
                       (#?(:clj  pmap
                           :cljs map)
-                        (partial error-function argmap))
-                      ;; sort population by total error
-                      (sort-by :total-error))
-         best-individual (first population)]
+                        (partial error-function argmap)))
+         best-individual (apply min-key :total-error population)]
     (do
-      (report/report-steady-state population population-size print-best-program)
+      (report/report-steady-state
+        iteration population current-population-size print-best-program)
       (cond
         ;; Success on training cases is verified on testing cases
         (zero? (:total-error best-individual))
@@ -91,23 +92,35 @@
               (println "Test cases failed."))
             (#?(:clj shutdown-agents)))
         ;;
-        :else (let [new-individuals (->>
-                                      ;; make new individuals
-                                      (repeatedly num-children
-                                                  #(variation/new-individual
-                                                     population
-                                                     argmap))
-                                      ;; evaluate new individuals
-                                      (#?(:clj  pmap
-                                          :cljs map)
-                                        (partial error-function argmap)))
-                    survivors (selection/select-survivors population
-                                                          population-size
-                                                          (- 1 prop-children))
-                    new-population (sort-by :total-error
-                                            (concat new-individuals survivors))
-                    new-best-individual (first new-population)]
-                (recur (count new-population)
+        :else (let [children (do
+                               (println "Making" num-children "children... ")
+                               (->>
+                                 ;; make children
+                                 (repeatedly num-children
+                                             #(variation/new-individual
+                                                population
+                                                argmap))
+                                 ;; evaluate children
+                                 (#?(:clj  pmap
+                                     :cljs map)
+                                   (partial error-function argmap))))
+                    best-child (do
+                                 (println "Finding best child...")
+                                 (apply min-key :total-error children))
+                    survivors (do
+                                (println "Selecting survivors...")
+                                (selection/select-survivors population
+                                                            current-population-size
+                                                            prop-children))
+                    new-population (do
+                                     (println "Creating new population...")
+                                     (utils/not-lazy
+                                       (concat (list best-individual)
+                                               children
+                                               survivors)))
+                    new-best-individual (min-key :total-error best-individual best-child)]
+                (recur (inc iteration)
+                       (count new-population)
                        new-population
                        new-best-individual))))))
 

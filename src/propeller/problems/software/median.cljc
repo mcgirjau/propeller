@@ -1,22 +1,23 @@
-(ns propeller.problems.software.number-io
+(ns propeller.problems.software.median
   (:require [propeller.genome :as genome]
             [propeller.push.interpreter :as interpreter]
             [propeller.push.state :as state]
             [propeller.push.utils.helpers :refer [get-stack-instructions]]
             [propeller.utils :as utils]
             [propeller.push.state :as state]
-            [propeller.tools.math :as math]
             #?(:cljs [cljs.reader :refer [read-string]])))
 
 ;; =============================================================================
-;; NUMBER IO PROBLEM
+;; MEDIAN PROBLEM
 ;;
 ;; This problem file defines the following problem:
-;;     There are two inputs, a float and an int. The program must read them in,
-;;     find their sum as a float, and print the result as a float.
+;;     Given 3 integers, print their median.
 ;;
 ;; Problem Source:
-;;     iJava (http://ijava.cs.umass.edu/)
+;;     C. Le Goues et al., "The ManyBugs and IntroClass Benchmarks for
+;;     Automated Repair of C Programs," in IEEE Transactions on Software
+;;     Engineering, vol. 41, no. 12, pp. 1236-1256, Dec. 1 2015.
+;;     doi: 10.1109/TSE.2015.2454513
 ;;
 ;; NOTES:
 ;;     input stack: in1 (float),
@@ -24,38 +25,33 @@
 ;;     output stack: printed output
 ;; =============================================================================
 
-;; =============================================================================
-;; DATA DOMAINS
-;;
-;; A list of data domains. Each domain is a map containing a "set" of inputs
-;; and two integers representing how many cases from the set should be used as
-;; training and testing cases respectively. Each "set" of inputs is either a
-;; list or a function that, when called, will create a random element of the set
-;; =============================================================================
-
-;; Random float between -100.0 and 100.0
-(defn random-float [] (- (* (rand) 200) 100))
-
 ;; Random integer between -100 and 100
-(defn random-int [] (- (rand-int 201) 100.0))
+(defn random-int [] (- (rand-int 201) 100))
 
 (def instructions
   (utils/not-lazy
     (concat
       ;; stack-specific instructions
-      (get-stack-instructions #{:float :integer :print})
+      (get-stack-instructions #{:boolean :exec :integer :print})
       ;; input instructions
-      (list :in1 :in2)
+      (list :in1 :in2 :in3)
       ;; ERCs
-      (list random-float random-int))))
+      (list random-int))))
+
+(defn correct-function
+  [[x y z]]
+  (cond
+    (or (<= x y z) (>= x y z)) y
+    (or (<= x z y) (>= x z y)) z
+    (or (<= z x y) (>= z x y)) x))
 
 (def train-and-test-data
-  (let [inputs (vec (repeatedly 1025 #(vector (random-int) (random-float))))
-        outputs (mapv #(apply + %) inputs)
-        train-set {:inputs  (take 25 inputs)
-                   :outputs (take 25 outputs)}
-        test-set {:inputs  (drop 25 inputs)
-                  :outputs (drop 25 outputs)}]
+  (let [inputs (vec (repeatedly 1100 #(vector (random-int) (random-int) (random-int))))
+        outputs (mapv correct-function inputs)
+        train-set {:inputs  (take 100 inputs)
+                   :outputs (take 100 outputs)}
+        test-set {:inputs  (drop 100 inputs)
+                  :outputs (drop 100 outputs)}]
     {:train train-set
      :test  test-set}))
 
@@ -72,18 +68,19 @@
                           (interpreter/interpret-program
                             program
                             (assoc state/empty-state :input {:in1 (first input)
-                                                             :in2 (last input)}
+                                                             :in2 (second input)
+                                                             :in3 (last input)}
                                                      :output '(""))
                             (:step-limit argmap))
                           :output))
                       inputs)
          parsed-outputs (map (fn [output]
                                (try (read-string output)
-                                    #?(:clj (catch Exception e 1000.0)
-                                       :cljs (catch js/Error. e 1000.0))))
+                                    #?(:clj (catch Exception e nil)
+                                       :cljs (catch js/Error. e nil))))
                              outputs)
          errors (map (fn [correct-output output]
-                       (min 1000.0 (math/abs (- correct-output output))))
+                       (if (= correct-output output) 0 1))
                      correct-outputs
                      parsed-outputs)]
      (assoc individual

@@ -24,8 +24,12 @@
     (println)))
 
 (defn report-steady-state
-  [population population-size print-best-program]
+  [iteration population population-size print-best-program]
   (let [best (first population)]
+    (println "-------------------------------------------------------")
+    (println "               Report for Iteration" iteration)
+    (println "-------------------------------------------------------")
+    (println)
     (when print-best-program
       (print "Best plushy: ") (prn (:plushy best))
       (print "Best program: ") (prn (genome/plushy->push (:plushy best))))
@@ -39,5 +43,4 @@
     (println "Average genome length:"
              (float (/ (reduce + (map count (map :plushy population)))
                        population-size)) "\n")
-    (println "------------------------------------------------------")
     (println)))

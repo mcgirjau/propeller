@@ -12,8 +12,8 @@
   (cond
     (integer? n)
     (cond
-      (> n globals/max-number-magnitude) (int globals/max-number-magnitude)
-      (< n (- globals/max-number-magnitude)) (int (- globals/max-number-magnitude))
+      (> n globals/max-number-magnitude) (long globals/max-number-magnitude)
+      (< n (- globals/max-number-magnitude)) (long (- globals/max-number-magnitude))
       :else n)
     :else
     (cond
