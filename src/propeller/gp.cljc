@@ -2,6 +2,7 @@
   (:require [clojure.string]
             [propeller.genome :as genome]
             [propeller.report :as report]
+            [propeller.selection :as selection]
             [propeller.variation :as variation]
             [propeller.push.instructions.bool]
             [propeller.push.instructions.character]
@@ -63,7 +64,8 @@
   ;;
   (println "Starting steady-state GP with args: " argmap)
   ;;
-  (loop [population (->>
+  (loop [population-size population-size
+         population (->>
                       ;; make population
                       (repeatedly population-size
                                   #(hash-map
@@ -79,7 +81,7 @@
                       (sort-by :total-error))
          best-individual (first population)]
     (do
-      (report/report-steady-state population print-best-program)
+      (report/report-steady-state population population-size print-best-program)
       (cond
         ;; Success on training cases is verified on testing cases
         (zero? (:total-error best-individual))
@@ -99,11 +101,15 @@
                                       (#?(:clj  pmap
                                           :cljs map)
                                         (partial error-function argmap)))
-                    survivors (random-sample (- 1 prop-children) population)
+                    survivors (selection/select-survivors population
+                                                          population-size
+                                                          (- 1 prop-children))
                     new-population (sort-by :total-error
                                             (concat new-individuals survivors))
                     new-best-individual (first new-population)]
-                (recur new-population new-best-individual))))))
+                (recur (count new-population)
+                       new-population
+                       new-best-individual))))))
 
 (defn gp
   [argmap]

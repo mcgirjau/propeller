@@ -27,3 +27,22 @@
   (case (:parent-selection argmap)
     :tournament (tournament-selection pop argmap)
     :lexicase (lexicase-selection pop argmap)))
+
+(defn select-survivors
+  "Selects survivors for a steady-state model."
+  [population population-size max-prop-to-remove]
+  (let [unique-ids (range population-size)
+        population (map #(assoc %1 :id %2) population unique-ids)
+        total-errors (map :total-error population)
+        scaled-slices (reductions + total-errors)
+        total (last scaled-slices)
+        population (map #(assoc %1 :slice %2) population scaled-slices)
+        max-individuals-to-remove (* max-prop-to-remove population-size)
+        ids-to-remove (set
+                        (for [i (range max-individuals-to-remove)
+                              :let [index (rand total)]]
+                          (->> population
+                               (drop-while #(<= (:slice %) index))
+                               (first)
+                               (:id))))]
+    (remove #(get ids-to-remove (:id %)) population)))
